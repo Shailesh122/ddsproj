@@ -22,6 +22,10 @@ def getHash(key):
 class Node:
     def __init__(self, ip, port):
         self.filenameList = []
+        self.uploadedFiles = []
+        self.needsetup = False
+        self.nip = ""
+        self.nport = ""
         self.ip = ip
         self.port = port
         self.address = (ip, port)
@@ -40,6 +44,29 @@ class Node:
         except socket.error:
             print("Socket not opened")
 
+    def __init__(self, ip, port,nip,nport):
+        self.filenameList = []
+        self.uploadedFiles = []
+        self.needsetup = True
+        self.nip = nip
+        self.nport = nport
+        self.ip = ip
+        self.port = port
+        self.address = (ip, port)
+        self.id = getHash(ip + ":" + str(port))
+        self.pred = (ip, port)            # Predecessor of this node
+        self.predID = self.id
+        self.succ = (ip, port)            # Successor to this node
+        self.succID = self.id
+        self.fingerTable = OrderedDict()        # Dictionary: key = IDs and value = (IP, port) tuple
+        # Making sockets
+            # Server socket used as listening socket for incoming connections hence threaded
+        try:
+            self.ServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.ServerSocket.bind((IP, PORT))
+            self.ServerSocket.listen()
+        except socket.error:
+            print("Socket not opened")
 
     def listenThread(self):
         # Storing the IP and port in address and saving the connection and threading
@@ -128,7 +155,8 @@ class Node:
             print("Receiving file:", filename)
             fileID = getHash(filename)
             print("Uploading file ID:", fileID)
-            self.filenameList.append(filename)
+            if filename not in self.filenameList:
+                self.filenameList.append(filename)
             self.receiveFile(connection, filename)
             print("Upload complete")
             # Replicating file to successor as well
@@ -230,24 +258,24 @@ class Node:
     def asAClientThread(self):
         # Printing options
         self.printMenu()
-        print("trying to connect")
-        self.sendJoinRequest(nip, int(nport))
+        if(self.needsetup):
+            print("connecting to Node "+str(self.nip)+":"+str(self.nport))
+            self.sendJoinRequest(self.nip, int(self.nport))
+            self.needsetup = False
+            print("Connection successful")
         userChoice = input()
         if userChoice == "1":
             ip = input("Enter IP to connect: ")
             port = input("Enter port: ")
             self.sendJoinRequest(ip, int(port))
         elif userChoice == "2":
+            self.reupload()
             self.leaveNetwork()
         elif userChoice == "3":
             filename = input("Enter filename: ")
             fileID = getHash(filename)
-            print("inside switch")
             recvIPport = self.getSuccessor(self.succ, fileID)
-            print("recvIPport:")
-            print(recvIPPort)
             self.uploadFile(filename, recvIPport, True)
-            print("switch end")
         elif userChoice == "4":
             filename = input("Enter filename: ")
             self.downloadFile(filename)
@@ -255,8 +283,23 @@ class Node:
             self.printFTable()
         elif userChoice == "6":
             print("My ID:", self.id, "Predecessor:", self.predID, "Successor:", self.succID)
-        # Reprinting Menu
-        # self.printMenu()
+        elif userChoice == "7":
+            print("Current uploaded files are :", end=" ")
+            print(self.uploadedFiles)
+        elif userChoice == "8":
+            print("Current uploaded files are :", end=" ")
+            print(self.uploadedFiles)
+            print("Current received files are :", end=" ")
+            print(self.filenameList)
+
+    def reupload(self):
+        print("Re-uploading the files present for replication purpose.")
+        for filename in self.uploadedFiles:
+            fileID = getHash(filename)
+            recvIPport = self.getSuccessor(self.succ, fileID)
+            self.uploadFile(filename, recvIPport, True)
+        print("Re-uploadding completed!")
+        print("Preparing to exit!")
 
     def sendJoinRequest(self, ip, port):
         try:
@@ -339,6 +382,8 @@ class Node:
             self.sendFile(cSocket, filename)
             cSocket.close()
             print("File uploaded")
+            if filename not in self.uploadedFiles:
+                self.uploadedFiles.append(filename)
         except IOError:
             print("File not in directory")
         except socket.error:
@@ -361,34 +406,33 @@ class Node:
             print("Receiving file:", filename)
             self.receiveFile(cSocket, filename)
 
-
     def getSuccessor(self, address, keyID):
-        print("inside get successor method")
+        # print("inside get successor method")
         rDataList = [1, address]      # Deafult values to run while loop
         recvIPPort = rDataList[1]
-        print("------------while loop---------------------")
+        # print("------------while loop---------------------")
         while rDataList[0] == 1:
             peerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             try:
-                print("connecting to recvIPPort:")
-                print(recvIPPort)
+                #print("connecting to recvIPPort:")
+                #print(recvIPPort)
                 peerSocket.connect(recvIPPort)
                 # Send continous lookup requests until required peer ID
                 sDataList = [3, keyID]
-                print("sDataList:")
-                print(sDataList)
+                #print("sDataList:")
+                # print(sDataList)
                 peerSocket.sendall(pickle.dumps(sDataList))
                 # Do continous lookup until you get your postion (0)
                 rDataList = pickle.loads(peerSocket.recv(buffer))
-                print("rDataList:")
-                print(rDataList)
+                #print("rDataList:")
+                #print(rDataList)
                 recvIPPort = rDataList[1]
                 peerSocket.close()
             except socket.error:
                 print("Connection denied while getting Successor")
         # print(rDataList)
-        print("------------while loop end---------------------")
-        print("outside get successor method")
+        #print("------------while loop end---------------------")
+        #print("outside get successor method")
         return recvIPPort
     
     def updateFTable(self):
@@ -505,7 +549,7 @@ else:
 nip = sys.argv[3]
 nport = sys.argv[4]
 
-myNode = Node(IP, PORT)
+myNode = Node(IP, PORT,nip,nport)
 print("My ID is:", myNode.id)
 print(nip)
 print(nport)
