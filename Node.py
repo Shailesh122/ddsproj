@@ -6,6 +6,7 @@ import time
 import hashlib
 import os
 from collections import OrderedDict
+from beautifultable import  BeautifulTable
 # Default values if command line arguments not given
 IP = "127.0.0.1"
 PORT = 2000
@@ -532,8 +533,20 @@ class Node:
                     # connection.send(pickle.dumps(True))
 
     def printMenu(self):
-        print("\n1. Join Network\n2. Leave Network\n3. Upload File\n4. Download File")
-        print("5. Print Finger Table\n6. Print my predecessor and successor")
+        #print("\n1. Join Network\n2. Leave Network\n3. Upload File\n4. Download File")
+        #print("5. Print Finger Table\n6. Print my predecessor and successor")
+        print("Please enter your choice from the menu below:")
+        table = BeautifulTable()
+        table.rows.append(["1","Join DHT Network"])
+        table.rows.append(["2", "Leave DHT Network"])
+        table.rows.append(["3", "Put up file"])
+        table.rows.append(["4", "Get a file"])
+        table.rows.append(["5","Show Finger Table"])
+        table.rows.append(["6","Show predecessor and successor"])
+        table.rows.append(["7","Display uploaded files"])
+        table.rows.append(["8","Display all files"])
+        table.columns.header= ["Choice ID","Choice Description"]
+        print(table)
 
     def printFTable(self):
         print("Printing F Table")
