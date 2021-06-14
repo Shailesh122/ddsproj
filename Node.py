@@ -7,6 +7,7 @@ import hashlib
 import os
 from collections import OrderedDict
 from beautifultable import  BeautifulTable
+from os import system
 # Default values if command line arguments not given
 IP = "127.0.0.1"
 PORT = 2000
@@ -258,13 +259,18 @@ class Node:
     # Handles all outgoing connections
     def asAClientThread(self):
         # Printing options
+        print("Please enter your choice from the menu below:\n\n")
         self.printMenu()
         if(self.needsetup):
             print("connecting to Node "+str(self.nip)+":"+str(self.nport))
             self.sendJoinRequest(self.nip, int(self.nport))
             self.needsetup = False
             print("Connection successful")
-        userChoice = input()
+        userChoice = input("Enter your Choice ID:")
+        system('clear')
+        self.printMenu()
+        print("You have entered choice:",end="")
+        print(userChoice)
         if userChoice == "1":
             ip = input("Enter IP to connect: ")
             port = input("Enter port: ")
@@ -533,9 +539,6 @@ class Node:
                     # connection.send(pickle.dumps(True))
 
     def printMenu(self):
-        #print("\n1. Join Network\n2. Leave Network\n3. Upload File\n4. Download File")
-        #print("5. Print Finger Table\n6. Print my predecessor and successor")
-        print("Please enter your choice from the menu below:")
         table = BeautifulTable()
         table.rows.append(["1","Join DHT Network"])
         table.rows.append(["2", "Leave DHT Network"])
@@ -545,13 +548,20 @@ class Node:
         table.rows.append(["6","Show predecessor and successor"])
         table.rows.append(["7","Display uploaded files"])
         table.rows.append(["8","Display all files"])
+        #table.rows.append(["9", "Put all the files from the node"]) # upload all the files
         table.columns.header= ["Choice ID","Choice Description"]
         print(table)
 
     def printFTable(self):
-        print("Printing F Table")
-        for key, value in self.fingerTable.items(): 
-            print("KeyID:", key, "Value", value)
+        print("Finger table for this node is as follows:")
+        table = BeautifulTable()
+        for key, value in self.fingerTable.items():
+            machineip = str(value[1][0]);
+            machineport = str(value[1][1]);
+            #machine = str(valip)+":"+str(valport)
+            table.rows.append([key, value[0], machineip,machineport])
+        table.columns.header=["Key ID","Node ID","Node Address","Node Port"]
+        print(table)
 
 if len(sys.argv) < 3:
     print("Arguments not supplied (Defaults used)")
@@ -563,8 +573,6 @@ nip = sys.argv[3]
 nport = sys.argv[4]
 
 myNode = Node(IP, PORT,nip,nport)
-print("My ID is:", myNode.id)
-print(nip)
-print(nport)
+print("Node created \n Assigned ID:", myNode.id)
 myNode.start()
 myNode.ServerSocket.close()
